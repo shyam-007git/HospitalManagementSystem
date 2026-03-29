@@ -4,17 +4,23 @@
 #  Update the DB_CONFIG dict with your local credentials
 # =========================================================
 
+import os
+
+from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import streamlit as st
 
+# Load values from .env in project root.
+load_dotenv()
+
 # ── Database credentials ──────────────────────────────────
 DB_CONFIG = {
-    "host":     "localhost",
-    "port":     5432,
-    "database": "hospital_db",
-    "user":     "postgres",       # change if needed
-    "password": "postgres",       # change to your password
+    "host":     os.getenv("DB_HOST"),
+    "port":     os.getenv("DB_PORT"),
+    "database": os.getenv("DB_NAME"),
+    "user":     os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
 }
 
 
@@ -29,7 +35,7 @@ def get_connection():
         return conn
     except psycopg2.OperationalError as e:
         st.error(f"❌ Database connection failed: {e}")
-        st.info("Please check your PostgreSQL credentials in `db_connection.py`.")
+        st.info("Please check your PostgreSQL credentials in the .env file.")
         return None
 
 

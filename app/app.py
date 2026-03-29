@@ -10,11 +10,14 @@ import sys, os
 
 # Make sure db_connection is importable from the same folder
 sys.path.insert(0, os.path.dirname(__file__))
-from app.db_connection import (
+from db_connection import (
     run_query, run_insert,
     get_departments, get_doctors, get_patients,
     get_appointments, get_billing_summary,
 )
+
+DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs")
+ER_DIAGRAM_PATH = os.path.join(DOCS_DIR, "ER_Diagram.md")
 
 # ── Page config ───────────────────────────────────────────
 st.set_page_config(
@@ -73,6 +76,7 @@ with st.sidebar:
             "📅 Book Appointment",
             "📋 View Appointments",
             "💳 Billing Overview",
+            "🗂️ ER Diagram",
         ],
         label_visibility="collapsed",
     )
@@ -491,3 +495,191 @@ elif page == "💳 Billing Overview":
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("No billing records found.")
+
+
+
+# =============================================================
+# PAGE 8 — ER DIAGRAM
+# =============================================================
+elif page == "🗂️ ER Diagram":
+    st.title("🐾 Hospital ER Diagram")
+    st.markdown("---")
+    
+    import streamlit.components.v1 as components
+    
+    er_html = """
+    <style>
+        #erd-container {
+            background: #ffffff; /* Clean White Background */
+            border-radius: 16px;
+            padding: 25px;
+            border: 2px solid #e0e0e0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: auto;
+        }
+        
+        /* THE VIBRANIUM BLACK EFFECT: Glowing Black Text */
+        svg text {
+            fill: #1a1a1a !important; /* Deep Black */
+            font-family: 'Inter', system-ui, sans-serif !important;
+            font-weight: 800 !important;
+            font-size: 16px !important;
+            filter: drop-shadow(0 0 1px #6B00FF); /* Subtle Purple Glow */
+        }
+
+        /* Entity Headers - Black with Purple Aura */
+        svg .node .entityBox text {
+            fill: #000000 !important;
+            font-size: 18px !important;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            filter: drop-shadow(0 0 3px #6B00FF);
+        }
+        
+        /* Relationship Lines - Glowing Black/Cyan */
+        svg .edgePath path {
+            stroke: #000000 !important;
+            stroke-width: 2.5px !important;
+            filter: drop-shadow(0 0 2px #00f5ff);
+        }
+
+        /* Relationship Labels */
+        svg .edgeLabel text {
+            fill: #6B00FF !important; /* Purple for action labels */
+            background: white !important;
+            font-weight: bold !important;
+        }
+        
+        /* Entity Boxes - White with Black/Purple borders */
+        svg .node rect {
+            fill: #ffffff !important;
+            stroke: #000000 !important;
+            stroke-width: 3px !important;
+            rx: 10 !important;
+            filter: drop-shadow(4px 4px 0px #6B00FF); /* Vibranium offset shadow */
+        }
+
+        /* PK/FK Indicators - High Visibility Red/Cyan */
+        svg text[tspan*="PK"] { fill: #ff0055 !important; }
+        svg text[tspan*="FK"] { fill: #008cff !important; }
+        
+        /* Interaction Hover */
+        svg .node:hover rect {
+            fill: #f8f0ff !important;
+            stroke: #6B00FF !important;
+            transform: translateY(-3px);
+            transition: 0.3s ease;
+        }
+    </style>
+    
+    <div id="erd-container">
+        <div id="erd" style="width:100%; min-height: 900px;"></div>
+    </div>
+    
+    <script type="module">
+      import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+      
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'default', // Using default base for white background
+        er: {
+            useMaxWidth: true,
+            diagramPadding: 20,
+            layoutDirection: 'TB',
+            minEntityWidth: 180,
+            minEntityHeight: 90
+        },
+        themeVariables: {
+          darkMode: false,
+          background: '#ffffff',
+          lineColor: '#000000',
+          primaryColor: '#ffffff',
+          primaryBorderColor: '#000000',
+          primaryTextColor: '#000000',
+          secondaryColor: '#6B00FF',
+          tertiaryColor: '#f8f9fa'
+        }
+      });
+      
+      const diagram = `erDiagram
+        DEPARTMENT {
+          serial department_id PK
+          varchar name
+          varchar location
+          varchar head_of_dept
+        }
+        DOCTOR {
+          serial doctor_id PK
+          int department_id FK
+          varchar first_name
+          varchar last_name
+          varchar specialization
+          int experience_yrs
+        }
+        PATIENT {
+          serial patient_id PK
+          varchar first_name
+          varchar last_name
+          varchar blood_group
+          varchar phone
+        }
+        APPOINTMENT {
+          serial appointment_id PK
+          int patient_id FK
+          int doctor_id FK
+          date appointment_date
+          varchar status
+        }
+        MEDICAL_RECORD {
+          serial record_id PK
+          int appointment_id FK
+          text diagnosis
+          text treatment
+          date follow_up_date
+        }
+        BILLING {
+          serial bill_id PK
+          int appointment_id FK
+          numeric total_amount
+          varchar payment_status
+        }
+        DEPARTMENT ||--o{ DOCTOR : "employs"
+        DOCTOR ||--o{ APPOINTMENT : "attends"
+        PATIENT ||--o{ APPOINTMENT : "books"
+        APPOINTMENT ||--o| MEDICAL_RECORD : "generates"
+        APPOINTMENT ||--o| BILLING : "billed via"
+        PATIENT ||--o{ BILLING : "pays"
+        PATIENT ||--o{ MEDICAL_RECORD : "has"
+        DOCTOR ||--o{ MEDICAL_RECORD : "creates"
+      `;
+      
+      const { svg } = await mermaid.render('erd-svg', diagram);
+      const container = document.getElementById('erd');
+      container.innerHTML = svg;
+      
+      const svgElement = container.querySelector('svg');
+      if (svgElement) {
+        svgElement.style.width = '100%';
+        svgElement.style.height = 'auto';
+      }
+    </script>
+    """
+    
+    components.html(er_html, height=950, scrolling=True)
+    
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### 🧬 Database Core Logic")
+        st.write("""
+        This schema follows a **Relational Model** designed for a Multi-specialty Hospital. 
+        The **Department** acts as the root entity, organizing **Doctors** who are 
+        linked to **Patients** through the central **Appointment** table. 
+        """)
+    with col2:
+        st.markdown("### 🔗 Relationship Integrity")
+        st.write("""
+        - **1:M (One-to-Many):** A Patient can have multiple Appointments and Medical Records.
+        - **1:1 (One-to-One):** Each unique Appointment triggers exactly one Billing entry 
+          and one specific Diagnosis record to maintain data normalization.
+        """)
